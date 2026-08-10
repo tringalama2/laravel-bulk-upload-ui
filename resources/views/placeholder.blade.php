@@ -1,1 +1,1 @@
-<div>Skeleton placeholder view.</div>
+<div>LaravelBulkUploadUI placeholder view.</div>

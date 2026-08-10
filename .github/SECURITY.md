@@ -8,4 +8,4 @@ Only the latest major version receives security fixes.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within :package_name, please send an email to :author_name at :author_email. All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability within Laravel Bulk Upload UI, please send an email to Steven Tringali at dr.tringali@gmail.com. All security vulnerabilities will be promptly addressed.

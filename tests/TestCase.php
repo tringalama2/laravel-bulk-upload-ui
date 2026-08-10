@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace VendorName\Skeleton\Tests;
+namespace Tringalama2\LaravelBulkUploadUI\Tests;
 
 use Orchestra\Testbench\TestCase as Orchestra;
-use VendorName\Skeleton\SkeletonServiceProvider;
+use Tringalama2\LaravelBulkUploadUI\LaravelBulkUploadUIServiceProvider;
 
 abstract class TestCase extends Orchestra
 {
     protected function getPackageProviders($app): array
     {
         return [
-            SkeletonServiceProvider::class,
+            LaravelBulkUploadUIServiceProvider::class,
         ];
     }
 }

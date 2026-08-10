@@ -1,18 +1,18 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "vendor-name/skeleton",
-    "description": "A Laravel package skeleton.",
+    "name": "tringalama2/laravel-bulk-upload-ui",
+    "description": "This package provide the workflow and UI for bulk uploads of CSV or Excel files with column mapping, data validation, and ability to fix data.",
     "keywords": [
-        "vendor-name",
         "laravel",
-        "skeleton"
+        "tringalama2",
+        "laravel-bulk-upload-ui"
     ],
-    "homepage": "https://github.com/vendor-name/skeleton",
+    "homepage": "https://github.com/tringalama2/laravel-bulk-upload-ui",
     "license": "MIT",
     "authors": [
         {
-            "name": "Author Name",
-            "email": "author@example.com",
+            "name": "Steven Tringali",
+            "email": "dr.tringali@gmail.com",
             "role": "Developer"
         }
     ],
@@ -22,10 +22,7 @@
     },
     "require-dev": {
         "larastan/larastan": "^3.9",
-        "laravel/agent-detector": "^2.0",
-        "laravel/chisel": "^0.1",
         "laravel/pint": "^1.29",
-        "laravel/prompts": "^0.3",
         "laravel/pao": "^1.0",
         "orchestra/testbench": "^10.0||^11.0",
         "pestphp/pest": "^4.6||^5.0",
@@ -35,24 +32,18 @@
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src/"
+            "Tringalama2\\LaravelBulkUploadUI\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests/",
+            "Tringalama2\\LaravelBulkUploadUI\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Workbench\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
         }
     },
     "scripts": {
-        "post-install-cmd": [
-            "@php configure.php"
-        ],
-        "post-update-cmd": [
-            "@php configure.php"
-        ],
         "post-autoload-dump": [
             "@clear",
             "@prepare"
@@ -96,10 +87,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VendorName\\Skeleton\\SkeletonServiceProvider"
+                "Tringalama2\\LaravelBulkUploadUI\\LaravelBulkUploadUIServiceProvider"
             ],
             "aliases": {
-                "Skeleton": "VendorName\\Skeleton\\Facades\\Skeleton"
+                "LaravelBulkUploadUI": "Tringalama2\\LaravelBulkUploadUI\\Facades\\LaravelBulkUploadUI"
             }
         }
     },
