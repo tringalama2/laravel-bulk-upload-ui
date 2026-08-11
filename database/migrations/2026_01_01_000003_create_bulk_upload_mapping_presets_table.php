@@ -10,15 +10,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('laravel_bulk_upload_ui_placeholder', function (Blueprint $table) {
+        Schema::create('bulk_upload_mapping_presets', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->unsignedBigInteger('owner_id')->nullable();
+            $table->string('importer_key');
+            $table->json('mapping');
             $table->timestamps();
+
+            $table->unique(['owner_id', 'importer_key']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('laravel_bulk_upload_ui_placeholder');
+        Schema::dropIfExists('bulk_upload_mapping_presets');
     }
 };

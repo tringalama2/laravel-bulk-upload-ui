@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{ namespace }};
+
+use Illuminate\Database\Eloquent\Model;
+use Tringalama2\LaravelBulkUploadUI\BulkImporter;
+use Tringalama2\LaravelBulkUploadUI\Models\BulkUploadBatch;
+use {{ modelNamespace }};
+
+class {{ class }} extends BulkImporter
+{
+    protected string $model = {{ modelClass }}::class;
+
+    // protected ?string $formRequest = \App\Http\Requests\Store{{ modelClass }}Request::class;
+
+    /** @var array<string, string> */
+    protected array $columns = [
+        //
+    ];
+
+    // protected ?string $frontend = 'livewire';
+
+    public function afterImportRow(Model $model, array $row): void
+    {
+    }
+
+    public function afterBatch(BulkUploadBatch $batch): void
+    {
+    }
+}

@@ -1,0 +1,201 @@
+/*
+ * Design tokens. :where() keeps this at zero specificity so a host overriding
+ * any of these in their own stylesheet — plain CSS, Tailwind, whatever — always
+ * wins without needing !important. See docs/theming.md.
+ */
+:where(.bulk-upload-wizard) {
+    --bulk-upload-ui-font-family: system-ui, sans-serif;
+    --bulk-upload-ui-color-text: #1f2937;
+    --bulk-upload-ui-color-text-muted: #6b7280;
+    --bulk-upload-ui-color-border: #e5e7eb;
+    --bulk-upload-ui-color-danger: #b91c1c;
+    --bulk-upload-ui-color-danger-bg: #fef2f2;
+    --bulk-upload-ui-color-success: #15803d;
+    --bulk-upload-ui-color-success-bg: #f0fdf4;
+    --bulk-upload-ui-color-primary: #111827;
+    --bulk-upload-ui-color-primary-text: #ffffff;
+    --bulk-upload-ui-radius: .375rem;
+}
+
+@media (prefers-color-scheme: dark) {
+    :where(.bulk-upload-wizard) {
+        --bulk-upload-ui-color-text: #e5e7eb;
+        --bulk-upload-ui-color-text-muted: #9ca3af;
+        --bulk-upload-ui-color-border: #374151;
+        --bulk-upload-ui-color-danger: #f87171;
+        --bulk-upload-ui-color-danger-bg: #450a0a;
+        --bulk-upload-ui-color-success: #4ade80;
+        --bulk-upload-ui-color-success-bg: #052e16;
+        --bulk-upload-ui-color-primary: #e5e7eb;
+        --bulk-upload-ui-color-primary-text: #111827;
+    }
+}
+
+.bulk-upload-wizard {
+    font-family: var(--bulk-upload-ui-font-family);
+    max-width: 960px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: var(--bulk-upload-ui-color-text);
+}
+
+.bulk-upload-wizard h1 {
+    font-size: 1.5rem;
+    margin-bottom: .25rem;
+}
+
+.bulk-upload-wizard .steps {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: 1.5rem;
+}
+
+.bulk-upload-wizard .step {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--bulk-upload-ui-color-text-muted);
+    font-size: .875rem;
+    font-weight: 600;
+}
+
+.bulk-upload-wizard .step.is-active {
+    color: var(--bulk-upload-ui-color-primary);
+}
+
+.bulk-upload-wizard .step-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    border: 2px solid var(--bulk-upload-ui-color-border);
+}
+
+.bulk-upload-wizard .step.is-active .step-circle {
+    border-color: var(--bulk-upload-ui-color-primary);
+    color: var(--bulk-upload-ui-color-primary);
+}
+
+.bulk-upload-wizard .step-chevron {
+    display: flex;
+    flex-shrink: 0;
+    color: var(--bulk-upload-ui-color-border);
+}
+
+.bulk-upload-wizard .hint {
+    color: var(--bulk-upload-ui-color-text-muted);
+    font-size: .875rem;
+}
+
+.bulk-upload-wizard .expected-columns-heading {
+    font-weight: 600;
+    margin-bottom: .25rem;
+}
+
+.bulk-upload-wizard .expected-columns {
+    margin: 0 0 1rem;
+    padding-left: 1.25rem;
+}
+
+.bulk-upload-wizard table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.bulk-upload-wizard th,
+.bulk-upload-wizard td {
+    border: 1px solid var(--bulk-upload-ui-color-border);
+    padding: .5rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.bulk-upload-wizard td.cell-invalid {
+    background: var(--bulk-upload-ui-color-danger-bg);
+}
+
+.bulk-upload-wizard .error {
+    color: var(--bulk-upload-ui-color-danger);
+    font-size: .8rem;
+    display: block;
+}
+
+.bulk-upload-wizard .status-column {
+    width: 2.5rem;
+    text-align: center;
+}
+
+.bulk-upload-wizard .status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+}
+
+.bulk-upload-wizard .status-icon.is-valid {
+    color: var(--bulk-upload-ui-color-success);
+    background: var(--bulk-upload-ui-color-success-bg);
+}
+
+.bulk-upload-wizard .status-icon.is-invalid {
+    color: var(--bulk-upload-ui-color-danger);
+    background: var(--bulk-upload-ui-color-danger-bg);
+}
+
+.bulk-upload-wizard .status-icon.is-neutral {
+    color: var(--bulk-upload-ui-color-text-muted);
+    border: 1px solid var(--bulk-upload-ui-color-border);
+}
+
+.bulk-upload-wizard .actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
+.bulk-upload-wizard button {
+    background: var(--bulk-upload-ui-color-primary);
+    color: var(--bulk-upload-ui-color-primary-text);
+    border: 0;
+    padding: .5rem 1rem;
+    border-radius: var(--bulk-upload-ui-radius);
+    cursor: pointer;
+}
+
+.bulk-upload-wizard button.btn-secondary {
+    background: transparent;
+    color: var(--bulk-upload-ui-color-text);
+    border: 1px solid var(--bulk-upload-ui-color-border);
+}
+
+.bulk-upload-wizard button[disabled] {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.bulk-upload-wizard input[type="text"] {
+    width: 100%;
+    padding: .25rem;
+    box-sizing: border-box;
+}
+
+.bulk-upload-wizard progress {
+    width: 100%;
+    height: 1rem;
+}
+
+.bulk-upload-wizard .pagination {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1rem;
+}

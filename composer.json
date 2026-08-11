@@ -18,17 +18,24 @@
     ],
     "require": {
         "php": "^8.3",
-        "illuminate/support": "^12.0||^13.0"
+        "illuminate/support": "^12.0||^13.0",
+        "maatwebsite/excel": "^3.1"
     },
     "require-dev": {
+        "inertiajs/inertia-laravel": "^2.0",
         "larastan/larastan": "^3.9",
-        "laravel/pint": "^1.29",
         "laravel/pao": "^1.0",
+        "laravel/pint": "^1.29",
+        "livewire/livewire": "^3.5",
         "orchestra/testbench": "^10.0||^11.0",
         "pestphp/pest": "^4.6||^5.0",
         "pestphp/pest-plugin-laravel": "^4.1||^5.0",
         "pestphp/pest-plugin-type-coverage": "^4.0||^5.0",
         "phpstan/extension-installer": "^1.4"
+    },
+    "suggest": {
+        "inertiajs/inertia-laravel": "Required to use the react or vue frontend (config('laravel-bulk-upload-ui.frontend')).",
+        "livewire/livewire": "Required to use the livewire frontend (config('laravel-bulk-upload-ui.frontend'))."
     },
     "autoload": {
         "psr-4": {
@@ -66,7 +73,7 @@
             "vendor/bin/pint --parallel --test"
         ],
         "analyse": [
-            "vendor/bin/phpstan analyse"
+            "vendor/bin/phpstan analyse --memory-limit=1G"
         ],
         "test:types": [
             "vendor/bin/pest --type-coverage --min=100"
