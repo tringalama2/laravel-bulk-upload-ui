@@ -12,6 +12,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use RuntimeException;
+use Tringalama2\LaravelBulkUploadUI\Actions\CancelBatchAction;
 use Tringalama2\LaravelBulkUploadUI\Actions\CommitAction;
 use Tringalama2\LaravelBulkUploadUI\Actions\SubmitMappingAction;
 use Tringalama2\LaravelBulkUploadUI\Actions\UpdateRowAction;
@@ -66,6 +67,17 @@ class BulkUploadWizard extends Component
         return $this->batchId !== null ? BulkUploadBatch::find($this->batchId) : null;
     }
 
+    /** The batch already occupying this importer's wizard, if the upload step is showing one. */
+    #[Computed]
+    public function activeBatch(): ?BulkUploadBatch
+    {
+        if ($this->step !== 'upload') {
+            return null;
+        }
+
+        return BulkUploadBatch::findActive($this->importerKey, auth()->id());
+    }
+
     /** @return LengthAwarePaginator<int, BulkUploadRow>|null */
     #[Computed]
     public function rows(): ?LengthAwarePaginator
@@ -91,6 +103,12 @@ class BulkUploadWizard extends Component
     public function submitUpload(UploadFileAction $action, MappingSuggester $suggester): void
     {
         $this->validate(['file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls']]);
+
+        if (BulkUploadBatch::findActive($this->importerKey, auth()->id()) !== null) {
+            $this->addError('file', 'You already have an import in progress for this file type. Finish it, or start over, before uploading another file.');
+
+            return;
+        }
 
         try {
             $batch = $action->execute($this->importer(), $this->file, auth()->id());
@@ -177,6 +195,33 @@ class BulkUploadWizard extends Component
         };
     }
 
+    /** Jump back into the wizard on the active batch found on the upload step. */
+    public function resumeActiveBatch(): void
+    {
+        $batch = $this->activeBatch();
+
+        if ($batch === null) {
+            return;
+        }
+
+        $this->batchId = $batch->id;
+        $this->step = $batch->status->wizardStep();
+    }
+
+    /** Discard the active batch found on the upload step so a new file can be uploaded. */
+    public function cancelActiveBatch(CancelBatchAction $action): void
+    {
+        $batch = $this->activeBatch();
+
+        if ($batch === null || ! $batch->status->isCancelable()) {
+            return;
+        }
+
+        $action->execute($batch);
+
+        $this->batchId = null;
+    }
+
     /**
      * Named importValidRows(), not commit() — despite no explicit documentation warning
      * (unlike "upload"), a component method literally named commit() is silently
@@ -199,6 +244,12 @@ class BulkUploadWizard extends Component
         if ($batch?->status->isTerminal()) {
             $this->step = 'complete';
         }
+    }
+
+    /** Reset the wizard to a blank upload step after a completed import. */
+    public function startNewImport(): void
+    {
+        $this->reset(['batchId', 'step', 'file', 'mapping', 'errorsOnly']);
     }
 
     private function requireBatch(): BulkUploadBatch

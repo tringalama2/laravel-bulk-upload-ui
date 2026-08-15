@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tringalama2\LaravelBulkUploadUI\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -62,6 +63,32 @@ class BulkUploadBatch extends Model
     public function rows(): HasMany
     {
         return $this->hasMany(BulkUploadRow::class, 'batch_id');
+    }
+
+    /**
+     * Batches that haven't reached a terminal status — i.e. still occupying the wizard.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeActive(Builder $query): void
+    {
+        $terminalStatuses = array_values(array_filter(
+            BatchStatus::cases(),
+            static fn (BatchStatus $status): bool => $status->isTerminal(),
+        ));
+
+        $query->whereNotIn('status', $terminalStatuses);
+    }
+
+    /** The batch currently occupying the wizard for this importer + owner, if any. */
+    public static function findActive(string $importerKey, int|string|null $ownerId): ?self
+    {
+        return static::query()
+            ->where('importer_key', $importerKey)
+            ->where('uploaded_by', $ownerId)
+            ->active()
+            ->latest('id')
+            ->first();
     }
 
     public function progressPercentage(): int

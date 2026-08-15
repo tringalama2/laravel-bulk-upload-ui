@@ -1,11 +1,13 @@
+import { Link } from '@inertiajs/react';
 import WizardSteps from '../../Components/WizardSteps';
 
-export default function Complete({ batch, fields, skippedRows, step }) {
+export default function Complete({ importerKey, routePrefix, batch, fields, skippedRows, step }) {
     return (
         <div className="bulk-upload-wizard">
             <WizardSteps step={step} />
             <h1>Import complete</h1>
             <p>{batch.imported_rows} row(s) imported, {batch.skipped_rows} row(s) skipped.</p>
+            <p><Link href={`/${routePrefix}/${importerKey}`}>Import another file</Link></p>
 
             {skippedRows?.length > 0 && (
                 <table>

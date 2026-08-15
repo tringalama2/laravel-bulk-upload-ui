@@ -16,7 +16,11 @@ class ColumnMapper
         $mapped = [];
 
         foreach ($mapping as $sourceHeader => $field) {
-            $mapped[$field] = $rawData[$sourceHeader] ?? null;
+            if (! array_key_exists($sourceHeader, $rawData)) {
+                continue;
+            }
+
+            $mapped[$field] = $rawData[$sourceHeader];
         }
 
         return $mapped;

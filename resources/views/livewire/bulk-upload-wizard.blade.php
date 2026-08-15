@@ -1,6 +1,7 @@
 @php
     $importer = $this->importer();
     $batch = $this->batch();
+    $activeBatch = $this->activeBatch();
 
     $wizardSteps = [
         'upload' => __('laravel-bulk-upload-ui::messages.step_upload'),
@@ -46,15 +47,31 @@
             @endforeach
         </ul>
 
-        <form wire:submit="submitUpload">
-            <input type="file" wire:model="file" accept=".csv,.txt,.xlsx,.xls">
-            @error('file')
-                <p class="error">{{ $message }}</p>
-            @enderror
-            <button type="submit" wire:loading.attr="disabled">
-                {{ __('laravel-bulk-upload-ui::messages.upload_button') }}
-            </button>
-        </form>
+        @if ($activeBatch)
+            <div class="notice">
+                <p>{{ __('laravel-bulk-upload-ui::messages.upload_active_notice', ['filename' => $activeBatch->original_filename]) }}</p>
+                <div class="actions">
+                    @if ($activeBatch->status->isCancelable())
+                        <button type="button" class="btn-secondary" wire:click="cancelActiveBatch">
+                            {{ __('laravel-bulk-upload-ui::messages.upload_start_over') }}
+                        </button>
+                    @endif
+                    <button type="button" wire:click="resumeActiveBatch">
+                        {{ __('laravel-bulk-upload-ui::messages.upload_continue') }}
+                    </button>
+                </div>
+            </div>
+        @else
+            <form wire:submit="submitUpload">
+                <input type="file" wire:model="file" accept=".csv,.txt,.xlsx,.xls">
+                @error('file')
+                    <p class="error">{{ $message }}</p>
+                @enderror
+                <button type="submit" wire:loading.attr="disabled">
+                    {{ __('laravel-bulk-upload-ui::messages.upload_button') }}
+                </button>
+            </form>
+        @endif
     @elseif ($step === 'map' && $batch)
         <h1>{{ __('laravel-bulk-upload-ui::messages.map_title') }}</h1>
         <p>{{ __('laravel-bulk-upload-ui::messages.map_instructions') }}</p>
@@ -103,6 +120,29 @@
             {{ __('laravel-bulk-upload-ui::messages.review_errors_only') }}
         </label>
 
+        @php($paginatedRows = $this->rows())
+        <div class="pagination-bar">
+            <span class="pagination-info">
+                @if ($paginatedRows && $paginatedRows->total() > 0)
+                    {{ __('laravel-bulk-upload-ui::messages.'.($errorsOnly ? 'review_pagination_range_errors' : 'review_pagination_range'), [
+                        'from' => $paginatedRows->firstItem(),
+                        'to' => $paginatedRows->lastItem(),
+                        'total' => $paginatedRows->total(),
+                    ]) }}
+                @else
+                    {{ __('laravel-bulk-upload-ui::messages.'.($errorsOnly ? 'review_pagination_empty_errors' : 'review_pagination_empty')) }}
+                @endif
+            </span>
+            <div class="pagination-controls">
+                <button type="button" class="btn-secondary pagination-btn" wire:click="previousPage" @disabled(! $paginatedRows || $paginatedRows->onFirstPage())>
+                    &lsaquo; {{ __('laravel-bulk-upload-ui::messages.pagination_previous') }}
+                </button>
+                <button type="button" class="btn-secondary pagination-btn" wire:click="nextPage" @disabled(! $paginatedRows || ! $paginatedRows->hasMorePages())>
+                    {{ __('laravel-bulk-upload-ui::messages.pagination_next') }} &rsaquo;
+                </button>
+            </div>
+        </div>
+
         <table>
             <thead>
                 <tr>
@@ -150,8 +190,6 @@
             </tbody>
         </table>
 
-        {{ $this->rows()?->links() }}
-
         <div class="actions">
             <button type="button" class="btn-secondary" wire:click="goToPreviousStep">{{ __('laravel-bulk-upload-ui::messages.wizard_previous') }}</button>
             <button wire:click="importValidRows">{{ __('laravel-bulk-upload-ui::messages.review_import_button') }}</button>
@@ -169,6 +207,11 @@
                 'imported' => $batch->imported_rows,
                 'skipped' => $batch->skipped_rows,
             ]) }}
+        </p>
+        <p>
+            <button type="button" class="btn-secondary" wire:click="startNewImport">
+                {{ __('laravel-bulk-upload-ui::messages.complete_import_another') }}
+            </button>
         </p>
     @endif
 </div>

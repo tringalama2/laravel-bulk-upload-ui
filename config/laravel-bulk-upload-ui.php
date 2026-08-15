@@ -19,6 +19,9 @@ return [
 
     'route' => [
         'prefix' => 'bulk-upload',
+        // The wizard allows only one in-flight batch per importer key per user, keyed by the
+        // authenticated user id — dropping 'auth' here means every guest shares one slot per
+        // importer key, since there's no id to tell them apart. See the README.
         'middleware' => ['web', 'auth'],
     ],
 

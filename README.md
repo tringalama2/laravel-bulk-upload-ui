@@ -73,6 +73,11 @@ Gate::define('bulkUpload', function (User $user, string $importerKey) {
 > [!WARNING]
 > Without this Gate defined, every request to the wizard is rejected. For local development only, you may bypass it by setting `BULK_UPLOAD_UI_DEV_ALLOW_ALL=true` in your `.env` file — just never enable that in production.
 
+Only one batch can be in flight per importer key per user at a time — revisiting the upload step while a batch is still uploading/mapping/validating/ready/importing shows that batch instead of a blank form, and uploading again is rejected until it's finished or discarded via "start over". This is scoped by the authenticated user id, which is why the default `route.middleware` includes `auth`.
+
+> [!WARNING]
+> If you remove `auth` from `route.middleware` and run the wizard for guests, every unauthenticated visitor shares the *same* "in progress" slot per importer key, because there's no user id to tell them apart. One guest can end up blocked by — or even able to cancel — a completely different guest's upload. Keep `auth` in place (or otherwise ensure every visitor has a stable, unique identity) for any importer guests can reach.
+
 ## Usage
 
 ### Generating an Importer
@@ -110,6 +115,8 @@ class ContactImporter extends BulkImporter
 ```
 
 ### Registering the Importer
+
+For each model you want to use the importer for, register it in the `importers` config array: as 'key' => 'class' pairs. The key name will be used in the wizard's URL.
 
 ```php
 // config/laravel-bulk-upload-ui.php

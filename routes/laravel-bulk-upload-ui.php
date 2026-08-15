@@ -15,6 +15,7 @@ Route::prefix(config('laravel-bulk-upload-ui.route.prefix', 'bulk-upload'))
     ->group(function (): void {
         Route::get('{key}', [BulkUploadController::class, 'show'])->name('show');
         Route::post('{key}/upload', [BulkUploadController::class, 'upload'])->name('upload');
+        Route::delete('{key}/{batch}/cancel', [BulkUploadController::class, 'cancel'])->name('cancel');
         Route::get('{key}/{batch}/map', [BulkUploadController::class, 'map'])->name('map');
         Route::post('{key}/{batch}/map', [BulkUploadController::class, 'submitMapping'])->name('map.submit');
         Route::get('{key}/{batch}/review', [BulkUploadController::class, 'review'])->name('review');

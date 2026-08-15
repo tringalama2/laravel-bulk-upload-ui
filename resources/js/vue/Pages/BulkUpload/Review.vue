@@ -14,6 +14,10 @@ const props = defineProps({
 });
 
 const saving = ref(null);
+const cellErrors = ref({});
+const goingBack = ref(false);
+const committing = ref(false);
+const actionError = ref(null);
 
 const VALID_ROW_STATUSES = ['valid', 'imported'];
 
@@ -22,7 +26,14 @@ function csrfToken() {
 }
 
 function goToPrevious() {
-    router.get(`/${props.routePrefix}/${props.importerKey}/${props.batch.id}/map`);
+    actionError.value = null;
+    goingBack.value = true;
+    router.get(`/${props.routePrefix}/${props.importerKey}/${props.batch.id}/map`, {}, {
+        onError: () => {
+            actionError.value = 'Could not go back. Please try again.';
+            goingBack.value = false;
+        },
+    });
 }
 
 function toggleErrorsOnly() {
@@ -34,24 +45,42 @@ function toggleErrorsOnly() {
 }
 
 async function updateCell(rowId, field, value) {
-    saving.value = `${rowId}-${field}`;
+    const key = `${rowId}-${field}`;
+    saving.value = key;
+    cellErrors.value = { ...cellErrors.value, [key]: null };
 
-    await fetch(`/${props.routePrefix}/${props.importerKey}/${props.batch.id}/rows/${rowId}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken(),
-            Accept: 'application/json',
-        },
-        body: JSON.stringify({ field, value }),
-    });
+    try {
+        const response = await fetch(`/${props.routePrefix}/${props.importerKey}/${props.batch.id}/rows/${rowId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+                Accept: 'application/json',
+            },
+            body: JSON.stringify({ field, value }),
+        });
 
-    saving.value = null;
-    router.reload({ only: ['rows', 'batch'] });
+        if (!response.ok) {
+            throw new Error('Request failed');
+        }
+
+        router.reload({ only: ['rows', 'batch'] });
+    } catch (error) {
+        cellErrors.value = { ...cellErrors.value, [key]: 'Could not save this change. Please try again.' };
+    } finally {
+        saving.value = null;
+    }
 }
 
 function commit() {
-    router.post(`/${props.routePrefix}/${props.importerKey}/${props.batch.id}/commit`);
+    actionError.value = null;
+    committing.value = true;
+    router.post(`/${props.routePrefix}/${props.importerKey}/${props.batch.id}/commit`, {}, {
+        onError: () => {
+            actionError.value = 'Could not start the import. Please try again.';
+            committing.value = false;
+        },
+    });
 }
 </script>
 
@@ -61,9 +90,27 @@ function commit() {
         <h1>Review your data</h1>
         <p>{{ batch.valid_rows }} of {{ batch.total_rows }} rows are ready to import.</p>
 
+        <p v-if="actionError" class="banner-error">{{ actionError }}</p>
+
         <label>
             <input type="checkbox" :checked="errorsOnly" @change="toggleErrorsOnly"> View errors only
         </label>
+
+        <div class="pagination-bar">
+            <span class="pagination-info">
+                {{ rows.total > 0
+                    ? `${rows.from}–${rows.to} of ${rows.total} ${errorsOnly ? 'errors' : 'rows'}`
+                    : `0 ${errorsOnly ? 'errors' : 'rows'}` }}
+            </span>
+            <div class="pagination-controls">
+                <button type="button" class="btn-secondary pagination-btn" :disabled="!rows.prev_page_url" @click="router.get(rows.prev_page_url)">
+                    &lsaquo; Prev
+                </button>
+                <button type="button" class="btn-secondary pagination-btn" :disabled="!rows.next_page_url" @click="router.get(rows.next_page_url)">
+                    Next &rsaquo;
+                </button>
+            </div>
+        </div>
 
         <table>
             <thead>
@@ -96,19 +143,26 @@ function commit() {
                             @blur="updateCell(row.id, field, $event.target.value)"
                         >
                         <small v-if="row.errors?.[field]" class="error">{{ row.errors[field].join(' ') }}</small>
+                        <small v-if="cellErrors[`${row.id}-${field}`]" class="error">{{ cellErrors[`${row.id}-${field}`] }}</small>
                     </td>
                 </tr>
             </tbody>
         </table>
 
-        <div class="pagination">
-            <button v-if="rows.prev_page_url" type="button" @click="router.get(rows.prev_page_url)">Previous page</button>
-            <button v-if="rows.next_page_url" type="button" @click="router.get(rows.next_page_url)">Next page</button>
-        </div>
-
         <div class="actions">
-            <button type="button" class="btn-secondary" @click="goToPrevious">Previous</button>
-            <button type="button" @click="commit">Import valid rows</button>
+            <button
+                type="button"
+                :class="goingBack ? 'btn-secondary is-loading' : 'btn-secondary'"
+                :disabled="goingBack || committing"
+                @click="goToPrevious"
+            >
+                <span v-if="goingBack" class="spinner" aria-hidden="true"></span>
+                {{ goingBack ? 'Going back…' : 'Previous' }}
+            </button>
+            <button type="button" :class="committing ? 'is-loading' : ''" :disabled="committing || goingBack" @click="commit">
+                <span v-if="committing" class="spinner" aria-hidden="true"></span>
+                {{ committing ? 'Starting import…' : 'Import valid rows' }}
+            </button>
         </div>
     </div>
 </template>

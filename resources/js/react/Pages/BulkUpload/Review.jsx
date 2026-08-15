@@ -35,9 +35,20 @@ function StatusIcon({ status }) {
 
 export default function Review({ importerKey, routePrefix, batch, fields, rows, errorsOnly, step }) {
     const [saving, setSaving] = useState(null);
+    const [cellErrors, setCellErrors] = useState({});
+    const [goingBack, setGoingBack] = useState(false);
+    const [committing, setCommitting] = useState(false);
+    const [actionError, setActionError] = useState(null);
 
     function goToPrevious() {
-        router.get(`/${routePrefix}/${importerKey}/${batch.id}/map`);
+        setActionError(null);
+        setGoingBack(true);
+        router.get(`/${routePrefix}/${importerKey}/${batch.id}/map`, {}, {
+            onError: () => {
+                setActionError('Could not go back. Please try again.');
+                setGoingBack(false);
+            },
+        });
     }
 
     function toggleErrorsOnly() {
@@ -49,24 +60,42 @@ export default function Review({ importerKey, routePrefix, batch, fields, rows, 
     }
 
     async function updateCell(rowId, field, value) {
-        setSaving(`${rowId}-${field}`);
+        const key = `${rowId}-${field}`;
+        setSaving(key);
+        setCellErrors((prev) => ({ ...prev, [key]: null }));
 
-        await fetch(`/${routePrefix}/${importerKey}/${batch.id}/rows/${rowId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken(),
-                Accept: 'application/json',
-            },
-            body: JSON.stringify({ field, value }),
-        });
+        try {
+            const response = await fetch(`/${routePrefix}/${importerKey}/${batch.id}/rows/${rowId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({ field, value }),
+            });
 
-        setSaving(null);
-        router.reload({ only: ['rows', 'batch'] });
+            if (!response.ok) {
+                throw new Error('Request failed');
+            }
+
+            router.reload({ only: ['rows', 'batch'] });
+        } catch (error) {
+            setCellErrors((prev) => ({ ...prev, [key]: 'Could not save this change. Please try again.' }));
+        } finally {
+            setSaving(null);
+        }
     }
 
     function commit() {
-        router.post(`/${routePrefix}/${importerKey}/${batch.id}/commit`);
+        setActionError(null);
+        setCommitting(true);
+        router.post(`/${routePrefix}/${importerKey}/${batch.id}/commit`, {}, {
+            onError: () => {
+                setActionError('Could not start the import. Please try again.');
+                setCommitting(false);
+            },
+        });
     }
 
     return (
@@ -75,9 +104,37 @@ export default function Review({ importerKey, routePrefix, batch, fields, rows, 
             <h1>Review your data</h1>
             <p>{batch.valid_rows} of {batch.total_rows} rows are ready to import.</p>
 
+            {actionError && <p className="banner-error">{actionError}</p>}
+
             <label>
                 <input type="checkbox" checked={!!errorsOnly} onChange={toggleErrorsOnly} /> View errors only
             </label>
+
+            <div className="pagination-bar">
+                <span className="pagination-info">
+                    {rows.total > 0
+                        ? `${rows.from}–${rows.to} of ${rows.total} ${errorsOnly ? 'errors' : 'rows'}`
+                        : `0 ${errorsOnly ? 'errors' : 'rows'}`}
+                </span>
+                <div className="pagination-controls">
+                    <button
+                        type="button"
+                        className="btn-secondary pagination-btn"
+                        disabled={!rows.prev_page_url}
+                        onClick={() => router.get(rows.prev_page_url)}
+                    >
+                        ‹ Prev
+                    </button>
+                    <button
+                        type="button"
+                        className="btn-secondary pagination-btn"
+                        disabled={!rows.next_page_url}
+                        onClick={() => router.get(rows.next_page_url)}
+                    >
+                        Next ›
+                    </button>
+                </div>
+            </div>
 
             <table>
                 <thead>
@@ -101,6 +158,7 @@ export default function Review({ importerKey, routePrefix, batch, fields, rows, 
                                         onBlur={(e) => updateCell(row.id, field, e.target.value)}
                                     />
                                     {row.errors?.[field] && <small className="error">{row.errors[field].join(' ')}</small>}
+                                    {cellErrors[`${row.id}-${field}`] && <small className="error">{cellErrors[`${row.id}-${field}`]}</small>}
                                 </td>
                             ))}
                         </tr>
@@ -108,14 +166,20 @@ export default function Review({ importerKey, routePrefix, batch, fields, rows, 
                 </tbody>
             </table>
 
-            <div className="pagination">
-                {rows.prev_page_url && <button type="button" onClick={() => router.get(rows.prev_page_url)}>Previous page</button>}
-                {rows.next_page_url && <button type="button" onClick={() => router.get(rows.next_page_url)}>Next page</button>}
-            </div>
-
             <div className="actions">
-                <button type="button" className="btn-secondary" onClick={goToPrevious}>Previous</button>
-                <button type="button" onClick={commit}>Import valid rows</button>
+                <button
+                    type="button"
+                    className={goingBack ? 'btn-secondary is-loading' : 'btn-secondary'}
+                    onClick={goToPrevious}
+                    disabled={goingBack || committing}
+                >
+                    {goingBack && <span className="spinner" aria-hidden="true" />}
+                    {goingBack ? 'Going back…' : 'Previous'}
+                </button>
+                <button type="button" className={committing ? 'is-loading' : ''} onClick={commit} disabled={committing || goingBack}>
+                    {committing && <span className="spinner" aria-hidden="true" />}
+                    {committing ? 'Starting import…' : 'Import valid rows'}
+                </button>
             </div>
         </div>
     );

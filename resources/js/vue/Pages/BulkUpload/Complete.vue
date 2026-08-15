@@ -1,7 +1,10 @@
 <script setup>
+import { Link } from '@inertiajs/vue3';
 import WizardSteps from '../../Components/WizardSteps.vue';
 
-defineProps({
+const props = defineProps({
+    importerKey: String,
+    routePrefix: String,
     batch: Object,
     fields: Object,
     skippedRows: Array,
@@ -14,6 +17,7 @@ defineProps({
         <WizardSteps :step="step" />
         <h1>Import complete</h1>
         <p>{{ batch.imported_rows }} row(s) imported, {{ batch.skipped_rows }} row(s) skipped.</p>
+        <p><Link :href="`/${props.routePrefix}/${props.importerKey}`">Import another file</Link></p>
 
         <table v-if="skippedRows?.length">
             <thead>

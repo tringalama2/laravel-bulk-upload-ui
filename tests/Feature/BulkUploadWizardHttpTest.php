@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Storage;
 use Tringalama2\LaravelBulkUploadUI\Enums\BatchStatus;
 use Tringalama2\LaravelBulkUploadUI\Enums\RowStatus;
 use Tringalama2\LaravelBulkUploadUI\Models\BulkUploadBatch;
@@ -146,4 +147,76 @@ it('reports live progress and a completion summary via JSON', function () {
         'skipped' => 0,
         'complete' => true,
     ]);
+});
+
+it('surfaces the in-progress batch on the upload step and blocks a second upload', function () {
+    config(['laravel-bulk-upload-ui.frontend' => 'react']);
+
+    $file = fakeContactsCsv([['Jane Doe', 'jane@example.com', '5551234567']]);
+    $this->post(route('bulk-upload-ui.upload', ['key' => 'contacts']), ['file' => $file]);
+    $batch = BulkUploadBatch::sole();
+
+    $response = $this->withHeaders(['X-Inertia' => 'true'])
+        ->get(route('bulk-upload-ui.show', ['key' => 'contacts']));
+
+    $response->assertOk();
+    expect($response->json('props.activeBatch'))->toBe([
+        'id' => $batch->id,
+        'filename' => $batch->original_filename,
+        'status' => 'uploaded',
+        'cancelable' => true,
+        'resumeUrl' => route('bulk-upload-ui.map', ['key' => 'contacts', 'batch' => $batch->id]),
+    ]);
+
+    $secondFile = fakeContactsCsv([['Other', 'other@example.com', '5559876543']]);
+    $this->post(route('bulk-upload-ui.upload', ['key' => 'contacts']), ['file' => $secondFile])
+        ->assertSessionHasErrors('file');
+
+    expect(BulkUploadBatch::count())->toBe(1);
+});
+
+it('lets a user start over, discarding the active batch and its file', function () {
+    Storage::fake('local');
+
+    $file = fakeContactsCsv([['Jane Doe', 'jane@example.com', '5551234567']]);
+    $this->post(route('bulk-upload-ui.upload', ['key' => 'contacts']), ['file' => $file]);
+    $batch = BulkUploadBatch::sole();
+    Storage::disk('local')->assertExists($batch->path);
+
+    $this->delete(route('bulk-upload-ui.cancel', ['key' => 'contacts', 'batch' => $batch->id]))
+        ->assertRedirect(route('bulk-upload-ui.show', ['key' => 'contacts']));
+
+    expect(BulkUploadBatch::count())->toBe(0);
+    Storage::disk('local')->assertMissing($batch->path);
+
+    $secondFile = fakeContactsCsv([['Other', 'other@example.com', '5559876543']]);
+    $this->post(route('bulk-upload-ui.upload', ['key' => 'contacts']), ['file' => $secondFile])
+        ->assertSessionDoesntHaveErrors();
+
+    expect(BulkUploadBatch::count())->toBe(1);
+});
+
+it('allows a fresh upload once the previous batch has completed', function () {
+    config(['laravel-bulk-upload-ui.frontend' => 'react']);
+
+    $file = fakeContactsCsv([['Jane Doe', 'jane@example.com', '5551234567']]);
+    $this->post(route('bulk-upload-ui.upload', ['key' => 'contacts']), ['file' => $file]);
+    $batch = BulkUploadBatch::sole();
+
+    $this->post(route('bulk-upload-ui.map', ['key' => 'contacts', 'batch' => $batch->id]), [
+        'mapping' => ['Full Name' => 'name', 'Email' => 'email', 'Phone Number' => 'phone'],
+    ]);
+    $this->post(route('bulk-upload-ui.commit', ['key' => 'contacts', 'batch' => $batch->id]));
+
+    expect($batch->fresh()->status)->toBe(BatchStatus::Completed);
+
+    $response = $this->withHeaders(['X-Inertia' => 'true'])
+        ->get(route('bulk-upload-ui.show', ['key' => 'contacts']));
+    expect($response->json('props.activeBatch'))->toBeNull();
+
+    $secondFile = fakeContactsCsv([['Other', 'other@example.com', '5559876543']]);
+    $this->post(route('bulk-upload-ui.upload', ['key' => 'contacts']), ['file' => $secondFile])
+        ->assertSessionDoesntHaveErrors();
+
+    expect(BulkUploadBatch::count())->toBe(2);
 });

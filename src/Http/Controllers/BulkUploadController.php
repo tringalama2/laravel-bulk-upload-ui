@@ -13,6 +13,7 @@ use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use RuntimeException;
+use Tringalama2\LaravelBulkUploadUI\Actions\CancelBatchAction;
 use Tringalama2\LaravelBulkUploadUI\Actions\CommitAction;
 use Tringalama2\LaravelBulkUploadUI\Actions\SubmitMappingAction;
 use Tringalama2\LaravelBulkUploadUI\Actions\UpdateRowAction;
@@ -33,10 +34,19 @@ class BulkUploadController extends Controller
     public function show(string $key): InertiaResponse|View
     {
         $importer = $this->registry->importer($key);
+        $ownerId = request()->user()?->getAuthIdentifier();
+        $activeBatch = BulkUploadBatch::findActive($key, $ownerId);
 
         return $this->render($importer, 'Upload', [
             'label' => $importer->label(),
             'fields' => $importer->columns(),
+            'activeBatch' => $activeBatch === null ? null : [
+                'id' => $activeBatch->id,
+                'filename' => $activeBatch->original_filename,
+                'status' => $activeBatch->status->value,
+                'cancelable' => $activeBatch->status->isCancelable(),
+                'resumeUrl' => route($activeBatch->status->wizardRouteName(), ['key' => $key, 'batch' => $activeBatch->id]),
+            ],
         ]);
     }
 
@@ -45,14 +55,28 @@ class BulkUploadController extends Controller
         $request->validate(['file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls']]);
 
         $importer = $this->registry->importer($key);
+        $ownerId = $request->user()?->getAuthIdentifier();
+
+        if (BulkUploadBatch::findActive($key, $ownerId) !== null) {
+            return back()->withErrors(['file' => 'You already have an import in progress for this file type. Finish it, or start over, before uploading another file.']);
+        }
 
         try {
-            $batch = $action->execute($importer, $request->file('file'), $request->user()?->getAuthIdentifier());
+            $batch = $action->execute($importer, $request->file('file'), $ownerId);
         } catch (InvalidHeaderRowException $exception) {
             return back()->withErrors(['file' => $exception->getMessage()]);
         }
 
         return redirect()->route('bulk-upload-ui.map', ['key' => $key, 'batch' => $batch->id]);
+    }
+
+    public function cancel(string $key, BulkUploadBatch $batch, CancelBatchAction $action): RedirectResponse
+    {
+        abort_unless($batch->status->isCancelable(), 409);
+
+        $action->execute($batch);
+
+        return redirect()->route('bulk-upload-ui.show', ['key' => $key]);
     }
 
     public function map(string $key, BulkUploadBatch $batch, MappingSuggester $suggester): InertiaResponse|View
@@ -65,7 +89,7 @@ class BulkUploadController extends Controller
             ->first();
 
         $suggestedMapping = $preset !== null
-            ? $preset->mapping
+            ? array_intersect_key($preset->mapping, array_flip($batch->headings ?? []))
             : $suggester->suggest($importer, $batch->headings ?? []);
 
         return $this->render($importer, 'Map', [
@@ -94,7 +118,8 @@ class BulkUploadController extends Controller
         $rows = $batch->rows()
             ->when($errorsOnly, fn (Builder $query): Builder => $query->where('status', RowStatus::Invalid))
             ->orderBy('row_number')
-            ->paginate(config('laravel-bulk-upload-ui.pagination.per_page', 50));
+            ->paginate(config('laravel-bulk-upload-ui.pagination.per_page', 50))
+            ->withQueryString();
 
         return $this->render($importer, 'Review', [
             'label' => $importer->label(),
